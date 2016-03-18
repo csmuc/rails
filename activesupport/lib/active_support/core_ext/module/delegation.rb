@@ -154,7 +154,13 @@ class Module
       raise ArgumentError, 'Delegation needs a target. Supply an options hash with a :to key as the last argument (e.g. delegate :hello, to: :greeter).'
     end
 
-    prefix, allow_nil = options.values_at(:prefix, :allow_nil)
+    prefix, allow_nil, klass_name = options.values_at(:prefix, :allow_nil, :name)
+
+    # avoid expensive name generation for anonymous classes or modules
+    # only required when raising DelegationError
+    unless allow_nil
+      klass_name ||= self.to_s
+    end
 
     if prefix == true && to =~ /^[^a-z_]/
       raise ArgumentError, 'Can only automatically set the delegation prefix when delegating to a method.'
@@ -195,7 +201,7 @@ class Module
         "end"
         ].join ';'
       else
-        exception = %(raise DelegationError, "#{self}##{method_prefix}#{method} delegated to #{to}.#{method}, but #{to} is nil: \#{self.inspect}")
+        exception = %(raise DelegationError, "#{klass_name}##{method_prefix}#{method} delegated to #{to}.#{method}, but #{to} is nil: \#{self.inspect}")
 
         method_def = [
           "def #{method_prefix}#{method}(#{definition})",
